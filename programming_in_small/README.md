@@ -178,7 +178,6 @@ func updateLeaderboard(events []Event) []Player {
 		leaderboard[event.PlayerID] += event.Score
 	}
 
-	// Convert to sorted list
 	var sortedLeaderboard []Player
 	for id, score := range leaderboard {
 		sortedLeaderboard = append(sortedLeaderboard, Player{ID: id, Score: score})
