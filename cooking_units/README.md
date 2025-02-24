@@ -63,64 +63,64 @@ func TestCache(t *testing.T) {
 	t.Run("set new value to cache", func(t *testing.T) {
 		cache := NewCache(10) // cache with capacity = 10
 
-        newValue := "aaa"
+		newValue := "aaa"
 
 		_, ok := cache.Get(newValue)
 		require.False(t, ok)
 
 		cache.Set(newValue)
 
-        _, ok := cache.Get(newValue)
+		_, ok := cache.Get(newValue)
 		require.True(t, ok)
 
-        require.Equal(t, 10, cache.Front())
+		require.Equal(t, 10, cache.Front())
 	})
 
 	t.Run("set existing value to cache", func(t *testing.T) {
 		cache := NewCache(10) // cache with capacity = 10
 
-        existingValue := "aaa"
+		existingValue := "aaa"
 
 		_, ok = cache.Get(existingValue)
-        require.True(t, ok)
+		require.True(t, ok)
 
-        cache.Set(existingValue)
+		cache.Set(existingValue)
 
-        require.Equal(t, 10, cache.Front())
+		require.Equal(t, 10, cache.Front())
 	})
 
-    t.Run("remove old element", func(t *testing.T) {
+	t.Run("remove old element", func(t *testing.T) {
 		cache := NewCache(10) // cache with capacity = 10
 
-        newValue := "aaa"
+		newValue := "aaa"
 
-        cache.Back() // out: "old"
+		cache.Back() // out: "old"
 
-        cache.Set(newValue)
+		cache.Set(newValue)
 
-        require.Equal(t, "replaced-old", cache.Back())
+		require.Equal(t, "replaced-old", cache.Back())
 	})
 
-    t.Run("get existing element", func(t *testing.T) {
+	t.Run("get existing element", func(t *testing.T) {
 		cache := NewCache(10) // cache with capacity = 10
 
-        existingValue := "aaa"
+		existingValue := "aaa"
 
 		value, ok = cache.Get(existingValue)
 
-        require.True(t, ok)
-        require.Equal(t, "aaa", value)
-        require.Equal(t, "aaa", cache.Front())
+		require.True(t, ok)
+		require.Equal(t, "aaa", value)
+		require.Equal(t, "aaa", cache.Front())
 	})
 
-     t.Run("get non existent element", func(t *testing.T) {
+	t.Run("get non existent element", func(t *testing.T) {
 		cache := NewCache(10) // cache with capacity = 10
 
-        nonExistentValue := "dddd"
+		nonExistentValue := "dddd"
 
 		value, ok = cache.Get(nonExistentValue)
-        
-        require.False(t, ok)
+
+		require.False(t, ok)
 	})
 }
 ~~~
