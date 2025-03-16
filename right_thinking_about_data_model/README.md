@@ -127,7 +127,7 @@ func (s *AdService) CreateAd(ad Ad) error {
     ad.GeoHash = geohash.Encode(ad.Latitude, ad.Longitude)
     return s.adRepo.Save(ad)
 }
-~~~
+```
 
 // Поиск "объявлений рядом" через GiST-индекс
 // SQL-запрос с использованием PostGIS
@@ -139,7 +139,7 @@ WHERE ST_DWithin(
     ST_MakePoint(?, ?),
     5000 // 5 км
 );
-```
+~~~
 
 **Упрощение API**:  
 - Клиенты получают эндпоинт с быстрым ответом:  
