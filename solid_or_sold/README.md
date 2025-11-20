@@ -1,0 +1,2 @@
+# SOLID или SOLD
+
