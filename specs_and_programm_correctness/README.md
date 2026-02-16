@@ -106,3 +106,54 @@ func (uc *OrderUseCase) GetLatestUserOrder(userID int64) (*model.Order, error) {
 	return &orders[0], nil
 }
 ~~~
+
+## Пример 3
+
+Комментарий:
+
+В хэндлере `CancelOrder` может возникнуть проблема с интерпретацией ошибки. Сейчас обработка завязана на небезопасную проверку вхождения в строку `strings.Contains(err.Error(), "not found")`, но что если кто-то решит изменить ошибку? Тогда мы легко начнем получать 500-ки вместо 400-ой ошибки. 
+
+Код:
+
+~~~go
+package handler
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"strings"
+
+	"internal/usecase"
+)
+
+type OrderHandler struct {
+	orderUC *usecase.OrderUseCase
+}
+
+func NewOrderHandler(uc *usecase.OrderUseCase) *OrderHandler {
+	return &OrderHandler{orderUC: uc}
+}
+
+type PlaceOrderRequest struct {
+	UserID    int64 `json:"user_id"`
+	ProductID int64 `json:"product_id"`
+	Quantity  int   `json:"quantity"`
+}
+
+// POST /api/order/{id}/cancel
+func (h *OrderHandler) CancelOrder(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	var orderID int64
+	fmt.Sscanf(idStr, "%d", &orderID)
+
+	if err := h.orderUC.CancelOrder(orderID); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			writeError(w, http.StatusNotFound, "order not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "failed to cancel order")
+		return
+	}
+}
+~~~
