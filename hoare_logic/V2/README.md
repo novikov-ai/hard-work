@@ -26,7 +26,7 @@ func Load(filenames ...string) (err error) {
 // Предусловия: в качестве массива строк передаются пути на файлы
 // Постусловия: если пути к файлам некорректные, то ошибка; если в файлах были найдены переменные окружения, то они были установлены
 func Load(filenames ...string) (err error) {
-    // new
+    // усиление постусловия
     if err := validatePaths(filenames); err != nil{
         return err
     }
@@ -70,14 +70,13 @@ func getWebhookURL(tgLogger *slog.Logger) string {
 
 После:
 - ослабили предусловние: убрали его совсем
-- усилили постусловие: если не было установлено переменных окружений, то сразу завершили работу
+- усилили постусловие: если не было установлено переменных окружений, то вернули ошибку
 ~~~go
-// Постусловия: если нет переменных окружений, то завершаем работу; получен URL веб-хука или завершение работы программы
-func getWebhookURL(tgLogger *slog.Logger) string {
-    // new
+// Постусловия: если нет переменных окружений, то завершаем работу с ошибкой; получен URL веб-хука или завершение работы программы
+func getWebhookURL(tgLogger *slog.Logger) (string, error) {
+    // усиление постусловия
     if !isEnvSetUp{
-        telegram.LogWarn(tgLogger, "Env haven't set up properly")
-        return ""
+         return "", fmt.Errorf("environment not configured")
     }
 
 	webhookURL := ""
@@ -90,11 +89,10 @@ func getWebhookURL(tgLogger *slog.Logger) string {
 	}
 
 	if webhookURL == "" {
-		telegram.LogError(tgLogger, "Webhook url is empty", nil)
-		log.Fatal("Webhook url is empty")
+		return "", fmt.Errorf("webhook url is empty for env=%s", envFlag)
 	}
 
-	return webhookURL
+	return webhookURL, nil
 }
 ~~~
 
@@ -132,18 +130,13 @@ func DailyPuzzle() (models.Puzzle, error) {
 
 После:
 - ослабили предусловние: убрали предусловие
-- усилили постусловие: проверяем наличие соединения и завершаем работу, если его нет
+- усилили постусловие: добавили классификацию ошибок и гарантию, что вернется не пустой puzzleID
 ~~~go
-// Постусловия: ошибка, если нет http-соединения; получена моделька пазла или ошибка, если были проблемы с формированием пазла
+// Постусловия: классифицированная ошибка, если есть проблемы; получена моделька пазла с непустым ID, если все хорошо
 func DailyPuzzle() (models.Puzzle, error) {
-    // new
-    if !ok := PingConn(){
-        return models.Puzzle{}, errors.New("conn is corrupted")
-    }
-
 	resp, err := http.Get(apiPuzzleDaily)
 	if err != nil {
-		return models.Puzzle{}, err
+		return models.Puzzle{}, fmt.Errorf("network: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -153,14 +146,21 @@ func DailyPuzzle() (models.Puzzle, error) {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return models.Puzzle{}, err
+		return models.Puzzle{}, fmt.Errorf("read body: %w", err)
 	}
 
 	var puzzle models.Puzzle
 	err = json.Unmarshal(body, &puzzle)
 	if err != nil {
-		return models.Puzzle{}, err
+		return models.Puzzle{}, fmt.Errorf("parse: %w", err)
 	}
+
+    // усиление постусловия
+    if puzzle.ID == "" {
+        return models.Puzzle{}, fmt.Errorf(
+            "parse: puzzle has empty ID",
+        )
+    }
 
 	return puzzle, nil
 }
@@ -203,9 +203,9 @@ func GetPictureURL(pgn string) (string, error) {
 // Предуловия: pgn — строка в производном формате
 // Постусловия: при некорректной pgn-строке — ошибка валидации; валидный URL-адрес с корректным расположением доски и ошибка либо ее отсутствие 
 func GetPictureURL(pgn string) (string, error) {
-    // new
+    // усиление постусловия
     if err := validate(pgn); err != nil{
-        return "", nil
+        return "", err
     }
 
 	respHTML, err := pgnImportRetrieveHTML(pgn)
@@ -272,17 +272,18 @@ func ComposePayload(gameID, gamePicURL string) map[string]interface{} {
 
 После:
 - ослабили предусловние: убрали "корректность" передаваемого URL
-- усилили постусловие: добавили валидацию URL
+- усилили постусловие: добавили валидацию URL и стали возвращать ошибку
 ~~~go
 // Предусловия: передан корректный игровой ID и произвольный URL
-// Постусловия: вернули пустой ответ, если URL некорректен; сформирован payload, преобразуемый в формат отправки сообщения
-func ComposePayload(gameID, gamePicURL string) map[string]interface{} {
-	if !urlValid(gamePicURL){
-        return nil
+// Постусловия: вернули ошибку, если URL некорректен; сформирован payload, преобразуемый в формат отправки сообщения
+func ComposePayload(gameID, gamePicURL string) (map[string]interface{}, error) {
+	// усиление постусловия
+    if err := urlValid(gamePicURL); err != nil{
+        return nil, err
     }
 
-    if gameID == "" || gamePicURL == "" {
-		return nil
+    if gameID == "" {
+		return nil, errors.New("empty game ID")
 	}
 
 	gameURL := endpointPuzzleTraining + gameID
@@ -300,7 +301,7 @@ func ComposePayload(gameID, gamePicURL string) map[string]interface{} {
 
 	plEncoded, err := json.Marshal(pl)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("marshal error: %w", err)
 	}
 
 	var result map[string]interface{}
@@ -309,6 +310,6 @@ func ComposePayload(gameID, gamePicURL string) map[string]interface{} {
 		return nil
 	}
 
-	return result
+	return result, nil
 }
 ~~~
